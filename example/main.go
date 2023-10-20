@@ -1,0 +1,96 @@
+package main
+
+import (
+	"log"
+	"time"
+
+	"github.com/ebfe/scard"
+	"github.com/tpc3/go-felica"
+)
+
+func main() {
+	ctx, err := scard.EstablishContext()
+	if err != nil {
+		log.Panic("Failed to make context", err)
+	}
+	defer ctx.Release()
+
+	readers, err := ctx.ListReaders()
+	if err != nil {
+		log.Panic("Failed to list readers")
+	}
+	if len(readers) != 1 {
+		log.Panic("Invalid number of reader: ", len(readers))
+	}
+
+	for {
+		log.Print("Waiting for card...")
+
+		var rawCard *scard.Card
+		for rawCard == nil {
+			err := ctx.GetStatusChange([]scard.ReaderState{
+				{
+					Reader:       readers[0],
+					CurrentState: scard.StateEmpty,
+				},
+			}, -1)
+			if err != nil {
+				log.Panic("failed to wait card: ", err)
+			}
+			rawCard, err = ctx.Connect(readers[0], scard.ShareExclusive, scard.ProtocolT1)
+			if err != nil {
+				log.Print("failed to connect card: ", err)
+			}
+		}
+
+		log.Print("card connected")
+
+		validCard := true
+
+		cardType, err := felica.GetData(rawCard, felica.DataTypeCardType)
+		if err != nil {
+			log.Panic("Failed to get card type: ", err)
+		}
+		log.Printf("card type: %x", cardType)
+		if cardType[0] != 0x04 {
+			validCard = false
+		}
+
+		uid, err := felica.GetData(rawCard, felica.DataTypeUID)
+		if err != nil {
+			log.Panic("Failed to get uid: ", err)
+		}
+		log.Printf("card uid: %x", uid)
+		// if cardType[0] != 0x04 {
+		// 	validCard = false
+		// }
+
+		if validCard {
+			masterKey := [24]byte([]byte("xNhAMv2J4bAW86Nddq8WDizc"))
+
+			_, err = felica.NewFelicaCard(rawCard, &masterKey)
+			if err != nil {
+				log.Print("card NG")
+			} else {
+				log.Print("card OK")
+			}
+		}
+
+		err = ctx.GetStatusChange([]scard.ReaderState{
+			{
+				Reader:       readers[0],
+				CurrentState: scard.StatePresent,
+			},
+		}, 10*time.Second)
+		if err != nil {
+			log.Print("wait disconnect NG")
+		}
+
+		err = rawCard.Disconnect(scard.ResetCard)
+		if err != nil {
+			log.Print("disconnect NG")
+		}
+
+		log.Print("end")
+	}
+}
