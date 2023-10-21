@@ -12,7 +12,7 @@ import (
 	"github.com/ebfe/scard"
 )
 
-var ErrNoResponse = errors.New("no responce from card")
+var ErrNoResponse = errors.New("no response from card")
 var ErrUnknown = errors.New("unknown error")
 var ErrMacNotMatched = errors.New("mac_a didn't matched")
 
