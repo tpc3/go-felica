@@ -14,6 +14,7 @@ import (
 
 var ErrNoResponse = errors.New("no response from card")
 var ErrUnknown = errors.New("unknown error")
+var ErrMasterKeyNil = errors.New("master key is nil")
 var ErrMacNotMatched = errors.New("mac_a didn't matched")
 
 type Card struct {
@@ -85,7 +86,12 @@ func GetData(card *scard.Card, dataType DataType) ([]byte, error) {
 	}
 }
 
-func NewFelicaCard(card *scard.Card, masterKey *[24]byte) (*Card, error) {
+// Return MasterKey from CKV
+// returning nil results ErrMasterKeyNil
+type MasterKeyProvider func([2]byte) *[24]byte
+
+// If masterKeyProvider is nil, MAC check skipped
+func NewFelicaCard(card *scard.Card, masterKeyProvider MasterKeyProvider) (*Card, error) {
 	c := Card{
 		Card: card,
 	}
@@ -108,21 +114,27 @@ func NewFelicaCard(card *scard.Card, masterKey *[24]byte) (*Card, error) {
 		return nil, fmt.Errorf("failed to write RC: %w", err)
 	}
 
-	resp, err := c.Read([]byte{AddressID, AddressMAC_A})
+	resp, err := c.Read([]byte{AddressID, AddressCKV, AddressMAC_A})
 	if err != nil {
 		return nil, fmt.Errorf("failed to read ID: %w", err)
 	}
 
 	c.ID = resp[0].Data
 
-	if masterKey != nil {
-		c.CK = c.GenCardKey(*masterKey)
+	if masterKeyProvider != nil {
+		masterKey := masterKeyProvider(([2]byte)(resp[1].Data[:2]))
+
+		if masterKey == nil {
+			return &c, ErrMasterKeyNil
+		}
+
+		c.CK = c.GenCardKey(masterKey)
 
 		c.SK = c.GenSessionKey()
 
 		mac := c.GenReadMac(resp)
 
-		if mac != [8]byte(resp[1].Data[:8]) {
+		if mac != [8]byte(resp[2].Data[:8]) {
 			return &c, ErrMacNotMatched
 		}
 	}
@@ -243,7 +255,7 @@ func (c *Card) Command(command []byte) ([]byte, error) {
 }
 
 // Generate CK with ID
-func (c *Card) GenCardKey(masterKey [24]byte) [16]byte {
+func (c *Card) GenCardKey(masterKey *[24]byte) [16]byte {
 	cipher, err := des.NewTripleDESCipher(masterKey[:])
 	if err != nil {
 		log.Panic("Failed to make cipher")
@@ -313,7 +325,7 @@ func (c *Card) GenReadMac(blocks []Block) [8]byte {
 		data[0][2*i+1] = 0x00
 	}
 	for _, v := range blocks {
-		if v.Address == 0x91 {
+		if v.Address == AddressMAC_A {
 			break
 		}
 		data = append(data, [8]byte(v.Data[:8]))

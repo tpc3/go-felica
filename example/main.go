@@ -68,9 +68,14 @@ func main() {
 		if validCard {
 			masterKey := [24]byte([]byte("xNhAMv2J4bAW86Nddq8WDizc"))
 
-			_, err = felica.NewFelicaCard(rawCard, &masterKey)
+			_, err = felica.NewFelicaCard(rawCard, func(CKV [2]byte) *[24]byte {
+				if CKV[0] == 0x00 && CKV[1] == 0x00 {
+					return &masterKey
+				}
+				return nil
+			})
 			if err != nil {
-				log.Print("card NG")
+				log.Print("card NG: ", err)
 			} else {
 				log.Print("card OK")
 			}
