@@ -21,17 +21,7 @@ type FeliCaLiteS struct {
 	Card *scard.Card
 }
 
-type DataType byte
-
-const (
-	DataTypeUID          DataType = 0x00
-	DataTypeID           DataType = 0xF0
-	DataTypeCardName     DataType = 0xF1
-	DataTypeCardType     DataType = 0xF3
-	DataTypeCardTypeName DataType = 0xF4
-)
-
-func GetData(card *scard.Card, dataType DataType) ([]byte, error) {
+func GetData(card *scard.Card, dataType felica.DataType) ([]byte, error) {
 	command := []byte{0xFF, 0xCA, byte(dataType), 0x00, 0x00}
 	resp, err := card.Transmit(command)
 	if err != nil {
@@ -56,7 +46,7 @@ func NewCard(card *scard.Card, masterKeyProvider MasterKeyProvider) (*FeliCaLite
 		Card: card,
 	}
 
-	err := c.SetService(ServiceRW)
+	err := c.SetService(felica.ServiceRW)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set service: %w", err)
 	}
@@ -186,11 +176,6 @@ func (c *FeliCaLiteS) WriteWithMac(data felica.Block) error {
 		Data:    macPadd,
 	}})
 }
-
-const (
-	ServiceRW = 0x0009
-	ServiceRO = 0x000b
-)
 
 func (c *FeliCaLiteS) SetService(service uint16) error {
 	command := []byte{0xFF, 0xA4, 0x00, 0x01, 0x02}

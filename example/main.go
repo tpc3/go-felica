@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ebfe/scard"
+	"github.com/tpc3/go-felica/felica"
 	"github.com/tpc3/go-felica/felica_pcsc"
 )
 
@@ -47,7 +48,7 @@ func main() {
 
 		validCard := true
 
-		cardType, err := felica_pcsc.GetData(rawCard, felica_pcsc.DataTypeCardType)
+		cardType, err := felica_pcsc.GetData(rawCard, felica.DataTypeCardType)
 		if err != nil {
 			log.Panic("Failed to get card type: ", err)
 		}
@@ -56,7 +57,7 @@ func main() {
 			validCard = false
 		}
 
-		uid, err := felica_pcsc.GetData(rawCard, felica_pcsc.DataTypeUID)
+		uid, err := felica_pcsc.GetData(rawCard, felica.DataTypeUID)
 		if err != nil {
 			log.Panic("Failed to get uid: ", err)
 		}

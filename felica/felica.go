@@ -64,6 +64,11 @@ const (
 	DataTypeCardTypeName DataType = 0xF4
 )
 
+const (
+	ServiceRW = 0x0009
+	ServiceRO = 0x000b
+)
+
 // Generate CK with ID
 func (c *FeliCaLiteS) GenCardKey(masterKey *[24]byte) [16]byte {
 	cipher, err := des.NewTripleDESCipher(masterKey[:])
