@@ -70,7 +70,7 @@ const (
 )
 
 // Generate CK with ID
-func (c *FeliCaLiteS) GenCardKey(masterKey *[24]byte) [16]byte {
+func (c *FeliCaLiteS) GenCardKey(masterKey *[24]byte) {
 	cipher, err := des.NewTripleDESCipher(masterKey[:])
 	if err != nil {
 		log.Panic("Failed to make cipher")
@@ -101,11 +101,11 @@ func (c *FeliCaLiteS) GenCardKey(masterKey *[24]byte) [16]byte {
 	T2 := make([]byte, des.BlockSize)
 	xor(C2, M2)
 	cipher.Encrypt(T2, C2)
-	return ([16]byte)(append(T1, T2...))
+	c.CK = ([16]byte)(append(T1, T2...))
 }
 
 // Generate SK with CK and RC
-func (c *FeliCaLiteS) GenSessionKey() (res [16]byte) {
+func (c *FeliCaLiteS) GenSessionKey() {
 	ck := c.CK
 	reverse(ck[:])
 	k := append(ck[8:], ck[:8]...)
@@ -120,15 +120,14 @@ func (c *FeliCaLiteS) GenSessionKey() (res [16]byte) {
 	data2 := make([]byte, 8)
 	cipher.Encrypt(data2, data1)
 	for i := 0; i < 8; i++ {
-		res[7-i] = data2[i]
+		c.SK[7-i] = data2[i]
 	}
 	reverse(rc[8:])
 	xor(data2, rc[8:])
 	cipher.Encrypt(data1, data2)
 	for i := 0; i < 8; i++ {
-		res[15-i] = data1[i]
+		c.SK[15-i] = data1[i]
 	}
-	return res
 }
 
 // Generate MAC from readed data with SK and RC

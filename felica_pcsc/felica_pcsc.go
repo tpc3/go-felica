@@ -78,9 +78,9 @@ func NewCard(card *scard.Card, masterKeyProvider MasterKeyProvider) (*FeliCaLite
 			return &c, ErrMasterKeyNil
 		}
 
-		c.CK = c.GenCardKey(masterKey)
+		c.GenCardKey(masterKey)
 
-		c.SK = c.GenSessionKey()
+		c.GenSessionKey()
 
 		mac := c.GenReadMac(resp)
 
