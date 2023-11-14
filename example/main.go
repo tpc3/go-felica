@@ -18,7 +18,7 @@ func main() {
 
 	readers, err := ctx.ListReaders()
 	if err != nil {
-		log.Panic("Failed to list readers")
+		log.Panic("Failed to list readers: ", err)
 	}
 	if len(readers) != 1 {
 		log.Panic("Invalid number of reader: ", len(readers))
